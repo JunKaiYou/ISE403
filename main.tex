@@ -1,0 +1,192 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+%\usepackage{amsaddr}
+\usepackage{physics}
+\usepackage{amsmath,graphicx}
+\usepackage{mathtools}
+\mathtoolsset{showonlyrefs=true}
+\usepackage{times}
+\usepackage{comment}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{enumitem}  
+\usepackage{xfrac}
+\usepackage[ruled,vlined]{algorithm2e}
+\usepackage{hyperref}
+ \hypersetup{
+     colorlinks=true,
+     linkcolor=blue,
+     filecolor=blue,
+     citecolor = blue,      
+     urlcolor=blue,
+     }
+\usepackage{authblk}
+
+\usepackage{datetime}
+\newdateformat{monthyeardate}{\THEDAY  \ \monthname[\THEMONTH], \ \THEYEAR}
+
+\usepackage{blindtext} % for dummy text
+
+\makeatletter
+    \setlength\@fptop{0\p@}
+\makeatother
+
+\newtheorem{theorem}{Theorem}[section]
+
+\newtheorem{definition}{Definition}[section]
+
+\newtheorem{assumption}{Assumption}[section]
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}{Proposition}[section]
+\newtheorem{remark}{Remark}[section]
+
+\newcommand{\inp}[0]{{z}}
+\newcommand{\inpS}[0]{{\mathcal{Z}}}
+
+% by Yen-Huan
+\usepackage{interval}
+\intervalconfig{soft open fences}
+\usepackage{xcolor}
+\usepackage{braket}
+%\usepackage{changes}
+% \newcommand{\norm}[1]{\Vert #1 \Vert}
+\DeclareMathOperator{\inte}{Int}
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\supp}{supp}
+
+\title{A Framework of Subgradient Methods for Solving Nonsmooth, Non-Lipschitz Convex Optimization Problems}
+%\title{Minimization of the Petz-R\'enyi divergence via adaptive mirror descent}
+
+
+\author{Jun-Kai~You \\ \monthyeardate\today}
+
+
+
+%\affil{\small $^1$Department of Computer Science and Information Engineering, National Taiwan University \\
+%$^2$Department of Mathematics, National Taiwan University\\
+%$^3$Department of Electrical Engineering and Graduate Institute of Communication Engineering, National Taiwan University\\ 
+%$^4$Hon Hai (Foxconn) Quantum Computing Centre\\
+%$^5$Center for Quantum Science and Engineering,  National Taiwan University
+%}
+
+
+\date{}
+\begin{document}
+
+\maketitle
+\begin{abstract}
+This paper presents a framework called \emph{radial transformations} to address a general convex optimization problem. Building on this framework, we provide several subgradient methods and show their convergence results, even in the absence of Lipschitz continuity and smoothness assumptions. Additionally, these algorithms eliminate the need for expensive orthogonal projections typically required by standard subgradient methods.
+\end{abstract}
+
+\section{Introduction}
+This paper considers an algorithmic framework first proposed by Renegar's work \cite{Renegar2016} for solving constrained convex optimization problems, whose objective functions may be non-Lipschitz and nonsmooth. This kind of general convex optimization problem encompasses several applications in many fields, such as portfolio selection in finance \cite{Maclean2012}, Poisson inverse problems in imaging processing \cite{Bertero2009, Hohage2016}, quantum state tomography in quantum physics \cite{Hradil1997, Paris2004}, and minimization of quantum Rényi divergences in quantum information theory \cite{You2022}. While their objective functions are convex, they violate the Lipschitz and smoothness assumptions that are common in the literature.
+
+One of the most known approaches to solving these constrained convex optimization problems is a projected subgradient method, which has received much attention recently due to its simplicity and scalability \cite{Nest2004, Bub2015}. The usual iteration complexity guarantees for subgradient methods are established under two conditions on the objective function: Lipschitz continuity and smoothness. However, these assumptions limit the applicability of subgradient methods, as many objective functions of applications, including those mentioned above, do not meet these two conditions. 
+
+To address the absence of Lipschitz continuity and smoothness in the objective function, certain ways to modify classical algorithms have been proposed, including line search methods \cite{ZLu2023}, normalized search directions \cite{Grimmer2019}, and non-Euclidean metrics \cite{Haihao2018, Bauschke2017}. The approach we follow in this paper is to consider a framework using radial projections \cite{Renegar2016, Grimmer2018, Grimmer2024a}. This \emph{radial transformations} framework provides a foundation for designing projection-free 
+optimization algorithms, significantly reducing the per-iteration computational cost.
+
+\section{Mathematical Background}
+\label{Math:Background}
+We consider the problem of minimizing a lower semi-continuous convex function $f: \mathbb{R}^n \rightarrow \mathbb{R}\cup \{\infty\}$, where the objective function $f$ is neither assumed to be smooth nor Lipschitz continuous. Any constrained convex optimization can be represented within this setting by assigning an infinite function value to all infeasible points. We start with the radial point and set transformations, which serve as foundational elements for establishing the radial function transformation. 
+\begin{definition}
+    The Radial Point Transformation of a point $(x, u) \in \mathbb{R}^n \times \mathbb{R}_{++}$ is
+\[
+\Gamma (x,u)=\frac{(x,1)}{u}=(\frac{x}{u},\frac{1}{u}),
+\]
+where $\mathbb{R}_{++} = \{ u \in \mathbb{R} \mid u > 0\}$ is the set of positive real numbers.
+\end{definition}
+
+Applying the radial point transformation elementwise
+to a set gives \emph{raidal set transformation}. We want to use these two to give transformation between functions lining up what we had for an indicator turning into a gauge. 
+\begin{definition}
+    The Radial Set Transformation of a set $S \subseteq \mathbb{R}^n \times \mathbb{R}_{++}$ is
+\[
+\Gamma S=\{\Gamma(x, u) \mid(x, u) \in S\}. 
+\]
+\end{definition}
+\begin{remark}
+    Both the radial point and set transformations are dual since
+\begin{equation*}
+    \Gamma\Gamma (x,u)=\Gamma\frac{(x,1)}{u}=\frac{(x/u,1)}{1/u}=(x,u).
+\end{equation*}
+\end{remark}
+
+To extend the radial set transformation to functions, we consider functions $f: \mathbb{R}^n \rightarrow \mathbb{R}_{++} \cup \{0,\infty\}$ mapping into the extended positive real numbers. Then we define \textit{the radial function transformation} as follows.
+
+\begin{definition}
+    The radial function transformation of $f$ is
+    \[
+    f^{\Gamma}(y)= \sup \{v>0 \mid (y,v) \in \Gamma(\mathrm{epi} \ f)\},
+    \]
+    where $\mathrm{epi} f = \{ (x,u)\in \mathbb{R}^n \times \mathbb{R}_{++} \mid f(x) \leq u \}$ denotes the epigraph of $f$.
+\end{definition}
+The following theorem demonstrates that the duality of the point and set transformations extends to the radial function transformations.
+
+\begin{theorem}
+    The radial function transformation of $f$ is dual (i.e.,$f^{\Gamma\Gamma} = f$) if and only if $f$ is convex and upper semi-continuous.
+\end{theorem}
+
+\begin{remark}
+    We find that for a wide range of functions, the duality of the point and set transformations carry over to the function transformations.
+    For example, for any convex set $S \subseteq \mathbb{R}^n$ strictly containing the origin, we define its indicator function as
+    \[
+    \hat{\imath}_S(y)= 
+    \begin{cases}
+        +\infty & \text { if } y \in S, \\ 0 & \text { if } y \notin S.
+    \end{cases}
+    \]
+    We have $\hat{\imath}^{\Gamma\Gamma}_S(y) = \hat{\imath}_S(y)$. The radial function transformation of $\hat{\imath}_S(y)$ is the Minkowski gauge of a set $S$. That is,
+    \[
+    \hat{\imath}^{\Gamma}_S(y)= \inf\{\lambda \geq 0 \mid y \in \lambda S\}.
+    \]
+\end{remark}
+
+The following defines the performance metrics to evaluate algorithms in terms of their convergence guarantees.
+
+\begin{definition}
+    A point $x$ has an absolute accuracy of $\epsilon$ if $f(x)-f^{\star}<\epsilon$. A point $x$ has a relative accuracy of $\epsilon$ if $\left(f(x)-f^{\star}\right)/\left(f(x_0)-f^{\star}\right)<\epsilon$,  where $x_0$ is a point in the interior of the domain of $f$ is known.
+\end{definition}
+
+\section{Literature Review} 
+\label{sec:intro}
+%% Motivation
+
+The general convex optimization problem in Section~\ref{Math:Background} is the focus of Renegar's work \cite{Renegar2016}. Renegar introduces a framework that reformulates such a problem into an equivalent uniformly Lipschitz problem. 
+Using a projection-free subgradient approach on the reformulated problem, he establishes convergence bounds comparable to those of traditional methods that rely on the assumption of Lipschitz continuity. 
+A key distinction in Renegar’s approach is that it provides a guarantee of relative accuracy rather than absolute accuracy in the solution. 
+
+Grimmer \cite{Grimmer2018} later extends Renegar's work \cite{Renegar2016} by introducing the concept of a radial transformation. 
+Instead of first converting the convex problem $f$ into conic form, the radial transformation operates directly on the original function. 
+Furthermore, Grimmer presents modifies versions of Renegar's algorithms (referred to as Algorithms A and B in \cite{Renegar2016}), which not only simplify the conceptual framework but also lead to better convergence rates.
+
+In a subsequent series of papers \cite{Grimmer2024a, Grimmer2024b}, Grimmer develops a comprehensive generalization of the ideas from \cite{Renegar2016} and \cite{Grimmer2018}. 
+The first part of this work \cite{Grimmer2024a} establishes the foundations for radial transformations in the following three ways: 
+(1) The radial transformation is often self-inverse, with a rich structure arising from this property. 
+(2) It creates a novel duality between nonnegative optimization problems. 
+(3) The radial transformation is the unique operation of its kind. 
+The upper transformation described in \cite{Grimmer2024a} is closely related to the transformation used by Grimmer \cite{Grimmer2018} and Renegar \cite{Renegar2016}.
+
+The second part of Grimmer’s work \cite{Grimmer2024b} builds upon the theory of radial transformations from \cite{Grimmer2024a} to develop new projection-free algorithms. 
+This work analyzes radial subgradient, smoothing, and accelerated methods for a wide class of non-Lipschitz problems. 
+These algorithms retain the advantages of their predecessors, avoiding Lipschitz continuity assumptions and costly orthogonal projections. 
+Additionally, this work demonstrates a broad range of applications and algorithms that can be addressed using radial duality theory.
+
+\section*{Personal Biography}
+Jun-Kai You was born in Taichung, Taiwan. He received a master’s degree in Electrical Engineering from National Tsing Hua University. He is a first-year PhD student in Industrial and Systems Engineering at Lehigh University, under the supervision of Prof. Tamás Terlaky and Prof. Luis F. Zuluaga. His research interests lie in optimization and machine learning theory, with his previous work focused on the design and analysis of algorithms for solving optimization problems defined with logarithmic losses. From 2023 to 2024, Jun-Kai worked as a Software and Development Engineer (TVC) on the Pixel camera 3A algorithm team at Google in Taiwan. From 2022 to 2023, he was a Research Engineer at MediaTek Research, specializing in chip-placement projects. Between 2019 to 2022, he served as a Research Assistant in Computer Science and Information Engineering at National Taiwan University, where he was advised by Prof. Yen-Huan Li and collaborated with Prof. Hao-Chung Cheng.
+
+
+\bibliographystyle{alpha}
+\bibliography{ref}
+
+
+
+\end{document}
+
+--------------------
+
+
+
+
+
